@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>
+BMTC Smart Transit Admin
+</title>
+
+<link rel="preconnect"
+href="https://fonts.googleapis.com">
+
+<link rel="preconnect"
+href="https://fonts.gstatic.com"
+crossorigin>
+
+<link href=
+"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:
+    "Inter",
+    sans-serif;
+}
+
+body{
+
+    background:
+    linear-gradient(
+        135deg,
+        #020617,
+        #07142d
+    );
+
+    color:white;
+
+    min-height:
+    100vh;
+
+    overflow-x:hidden;
+}
+
+/* NAVBAR */
+
+.navbar{
+
+    display:flex;
+
+    justify-content:
+    space-between;
+
+    align-items:center;
+
+    padding:
+    20px 40px;
+
+    background:
+    linear-gradient(
+        90deg,
+        rgba(
+            15,
+            23,
+            42,
+            0.95
+        ),
+        rgba(
+            30,
+            41,
+            59,
+            0.95
+        )
+    );
+
+    border-bottom:
+    1px solid
+    rgba(
+        255,
+        255,
+        255,
+        0.08
+    );
+}
+
+.brand{
+
+    display:flex;
+
+    gap:16px;
+
+    align-items:center;
+}
+
+.logo{
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:
+    20px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #2563eb,
+        #60a5fa
+    );
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:28px;
+}
+
+.brand h1{
+
+    font-size:30px;
+
+    font-weight:800;
+}
+
+.brand p{
+
+    color:#94a3b8;
+}
+
+.status-badge{
+
+    padding:
+    14px 22px;
+
+    border-radius:
+    999px;
+
+    background:
+    rgba(
+        34,
+        197,
+        94,
+        0.15
+    );
+
+    border:
+    1px solid
+    rgba(
+        34,
+        197,
+        94,
+        0.3
+    );
+
+    color:
+    #86efac;
+
+    font-weight:700;
+}
+
+/* LAYOUT */
+
+.dashboard{
+
+    display:grid;
+
+    grid-template-columns:
+    370px
+    1fr
+    340px;
+
+    gap:24px;
+
+    padding:
+    24px;
+
+    max-width:
+    1800px;
+
+    margin:auto;
+}
+
+/* CARD */
+
+.card{
+
+    background:
+    rgba(
+        15,
+        23,
+        42,
+        0.72
+    );
+
+    border:
+    1px solid
+    rgba(
+        255,
+        255,
+        255,
+        0.08
+    );
+
+    backdrop-filter:
+    blur(20px);
+
+    border-radius:
+    30px;
+
+    padding:
+    26px;
+}
+
+.section-title{
+
+    font-size:28px;
+
+    font-weight:800;
+
+    margin-bottom:
+    24px;
+}
+
+/* CONTROLS */
+
+.control-group{
+
+    margin-bottom:
+    24px;
+}
+
+label{
+
+    display:block;
+
+    margin-bottom:
+    12px;
+
+    color:#cbd5e1;
+
+    font-weight:600;
+}
+
+.slider{
+
+    width:100%;
+}
+
+select{
+
+    width:100%;
+
+    padding:16px;
+
+    border:none;
+
+    border-radius:18px;
+
+    background:
+    rgba(
+        255,
+        255,
+        255,
+        0.08
+    );
+
+    color:white;
+
+    font-size:16px;
+
+    outline:none;
+
+    appearance:auto;
+}
+
+select option{
+
+    background:
+    #0f172a;
+
+    color:white;
+}
+
+.toggle{
+
+    display:flex;
+
+    justify-content:
+    space-between;
+
+    align-items:center;
+
+    background:
+    rgba(
+        255,
+        255,
+        255,
+        0.05
+    );
+
+    border-radius:
+    18px;
+
+    padding:
+    16px;
+
+    margin-bottom:
+    14px;
+}
+
+.switch{
+
+    width:54px;
+
+    height:28px;
+
+    position:relative;
+}
+
+.switch input{
+
+    display:none;
+}
+
+.slider-toggle{
+
+    position:absolute;
+
+    inset:0;
+
+    background:#334155;
+
+    border-radius:
+    999px;
+
+    cursor:pointer;
+
+    transition:
+    .3s;
+}
+
+.slider-toggle::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:22px;
+
+    height:22px;
+
+    left:3px;
+
+    top:3px;
+
+    background:white;
+
+    border-radius:50%;
+
+    transition:.3s;
+}
+
+input:checked
++
+.slider-toggle{
+
+    background:
+    #2563eb;
+}
+
+input:checked
++
+.slider-toggle::before{
+
+    transform:
+    translateX(26px);
+}
+
+/* CENTER */
+
+.stats-grid{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(2,1fr);
+
+    gap:18px;
+}
+
+.stat-card{
+
+    background:
+    rgba(
+        255,
+        255,
+        255,
+        0.05
+    );
+
+    border-radius:
+    24px;
+
+    padding:
+    24px;
+}
+
+.stat-title{
+
+    color:#94a3b8;
+
+    margin-bottom:
+    10px;
+}
+
+.stat-value{
+
+    font-size:36px;
+
+    font-weight:800;
+}
+
+.live-monitor{
+
+    margin-top:
+    24px;
+
+    background:
+    rgba(
+        255,
+        255,
+        255,
+        0.05
+    );
+
+    border-radius:
+    28px;
+
+    padding:
+    24px;
+}
+
+.monitor-line{
+
+    display:flex;
+
+    justify-content:
+    space-between;
+
+    margin-bottom:
+    16px;
+}
+
+.right-card{
+
+    background:
+    rgba(
+        255,
+        255,
+        255,
+        0.05
+    );
+
+    border-radius:
+    24px;
+
+    padding:
+    22px;
+
+    margin-bottom:
+    18px;
+}
+
+.big-number{
+
+    font-size:38px;
+
+    font-weight:800;
+}
+
+.apply-btn{
+
+    width:100%;
+
+    margin-top:
+    20px;
+
+    padding:
+    18px;
+
+    border:none;
+
+    border-radius:
+    22px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #2563eb,
+        #60a5fa
+    );
+
+    color:white;
+
+    font-size:17px;
+
+    font-weight:700;
+
+    cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+
+<div class="brand">
+
+<div class="logo">
+🛰
+</div>
+
+<div>
+
+<h1>
+Transit Command Center
+</h1>
+
+<p>
+BMTC Smart Transit AI Admin
+</p>
+
+</div>
+
+</div>
+
+<div class="status-badge">
+🟢 AI SYSTEM ACTIVE
+</div>
+
+</nav>
+
+<div class="dashboard">
+    <!-- LEFT PANEL -->
+
+<div class="card">
+
+<h2 class="section-title">
+Simulation Controls
+</h2>
+
+<div class="control-group">
+
+<label>
+Traffic Level
+</label>
+
+<input
+type="range"
+min="1"
+max="10"
+value="3"
+class="slider"
+id="trafficLevel">
+
+<p
+style="
+margin-top:10px;
+color:#94a3b8;
+">
+
+Level:
+<span id="trafficValue">
+3
+</span>
+
+</p>
+
+</div>
+
+<div class="control-group">
+
+<label>
+Weather
+</label>
+
+<select id="weather">
+
+<option>
+Clear
+</option>
+
+<option>
+Rain
+</option>
+
+<option>
+Fog
+</option>
+
+<option>
+Storm
+</option>
+
+</select>
+
+</div>
+
+<div class="toggle">
+
+<div>
+
+<h4>
+Peak Hour
+</h4>
+
+<p
+style="
+color:#94a3b8;
+font-size:14px;
+">
+
+Enable rush-hour simulation
+
+</p>
+
+</div>
+
+<label class="switch">
+
+<input
+type="checkbox"
+id="peakHour">
+
+<span class="slider-toggle">
+</span>
+
+</label>
+
+</div>
+
+<div class="toggle">
+
+<div>
+
+<h4>
+Special Event
+</h4>
+
+<p
+style="
+color:#94a3b8;
+font-size:14px;
+">
+
+Festival / rally crowd
+
+</p>
+
+</div>
+
+<label class="switch">
+
+<input
+type="checkbox"
+id="specialEvent">
+
+<span class="slider-toggle">
+</span>
+
+</label>
+
+</div>
+
+<div class="toggle">
+
+<div>
+
+<h4>
+Emergency Mode
+</h4>
+
+<p
+style="
+color:#94a3b8;
+font-size:14px;
+">
+
+Road block / accident
+
+</p>
+
+</div>
+
+<label class="switch">
+
+<input
+type="checkbox"
+id="emergencyMode">
+
+<span class="slider-toggle">
+</span>
+
+</label>
+
+</div>
+
+<button
+class="apply-btn"
+onclick="applySimulation()">
+
+Apply Smart Simulation
+
+</button>
+
+</div>
+
+<!-- CENTER PANEL -->
+
+<div class="card">
+
+<h2 class="section-title">
+Transit Intelligence
+</h2>
+
+<div class="stats-grid">
+
+<div class="stat-card">
+
+<div class="stat-title">
+Active Buses
+</div>
+
+<div class="stat-value">
+42
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div class="stat-title">
+Passengers Today
+</div>
+
+<div class="stat-value">
+13,482
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div class="stat-title">
+Congestion Level
+</div>
+
+<div
+class="stat-value"
+id="congestionText">
+
+Low
+</div>
+
+</div>
+
+<div class="stat-card">
+
+<div class="stat-title">
+Weather
+</div>
+
+<div
+class="stat-value"
+id="weatherText">
+
+Clear
+</div>
+
+</div>
+
+</div>
+
+<div class="live-monitor">
+
+<h2
+style="
+margin-bottom:20px;
+">
+
+AI Live Monitor
+</h2>
+
+<div class="monitor-line">
+
+<span>
+Model Accuracy
+</span>
+
+<strong>
+98.7%
+</strong>
+
+</div>
+
+<div class="monitor-line">
+
+<span>
+Predictions Served
+</span>
+
+<strong>
+12,481
+</strong>
+
+</div>
+
+<div class="monitor-line">
+
+<span>
+Inference Time
+</span>
+
+<strong>
+0.21 sec
+</strong>
+
+</div>
+
+<div class="monitor-line">
+
+<span>
+System Status
+</span>
+
+<strong
+style="
+color:#4ade80;
+">
+
+ACTIVE
+
+</strong>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- RIGHT PANEL -->
+
+<div class="card">
+
+<h2 class="section-title">
+AI Overview
+</h2>
+
+<div class="right-card">
+
+<div>
+Traffic Score
+</div>
+
+<div
+class="big-number"
+id="trafficBig">
+
+3
+</div>
+
+</div>
+
+<div class="right-card">
+
+<div>
+Weather State
+</div>
+
+<div
+class="big-number"
+id="weatherBig">
+
+☀
+</div>
+
+</div>
+
+<div class="right-card">
+
+<div>
+Emergency
+</div>
+
+<div
+class="big-number"
+id="emergencyText">
+
+OFF
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const slider =
+document
+.getElementById(
+"trafficLevel"
+);
+
+slider.addEventListener(
+"input",
+function(){
+
+document
+.getElementById(
+"trafficValue"
+)
+.innerText =
+slider.value;
+}
+);
+
+async function
+applySimulation(){
+
+const traffic =
+parseInt(
+document
+.getElementById(
+"trafficLevel"
+).value
+);
+
+const weather =
+document
+.getElementById(
+"weather"
+).value;
+
+const peakHour =
+document
+.getElementById(
+"peakHour"
+).checked;
+
+const specialEvent =
+document
+.getElementById(
+"specialEvent"
+).checked;
+
+const emergencyMode =
+document
+.getElementById(
+"emergencyMode"
+).checked;
+
+await fetch(
+"/update_simulation",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:
+JSON.stringify({
+
+traffic_level:
+traffic,
+
+weather:
+weather,
+
+peak_hour:
+peakHour,
+
+special_event:
+specialEvent,
+
+emergency_mode:
+emergencyMode
+})
+}
+);
+
+document
+.getElementById(
+"trafficBig"
+)
+.innerText =
+traffic;
+
+document
+.getElementById(
+"weatherText"
+)
+.innerText =
+weather;
+
+document
+.getElementById(
+"weatherBig"
+)
+.innerText =
+
+weather
+=== "Rain"
+? "🌧"
+
+: weather
+=== "Fog"
+? "🌫"
+
+: weather
+=== "Storm"
+? "⛈"
+
+: "☀";
+
+document
+.getElementById(
+"emergencyText"
+)
+.innerText =
+
+emergencyMode
+? "ON"
+
+: "OFF";
+
+document
+.getElementById(
+"congestionText"
+)
+.innerText =
+
+traffic >= 8
+? "High"
+
+: traffic >= 5
+? "Medium"
+
+: "Low";
+
+alert(
+"Simulation Updated"
+);
+
+}
+
+</script>
+
+</body>
+</html>
