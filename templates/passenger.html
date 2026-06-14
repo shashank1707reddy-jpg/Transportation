@@ -35,10 +35,83 @@ rel="stylesheet">
 <!-- LEAFLET -->
 <link
 rel="stylesheet"
-href=
-"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 
 <style>
+@keyframes busBounce {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.live-bus-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 18px !important;
+}
+
+.live-bus-popup .leaflet-popup-tip-container {
+    display: none;
+}
+
+.live-bus-popup .leaflet-popup-content {
+    margin: 0 !important;
+}
+
+.live-bus-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.35);
+    color: #22c55e;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+    animation: livePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.legend-box {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
 .route-stops-card{
     margin-top:20px;
 }
@@ -752,13 +825,37 @@ select option{
                 margin-top:8px;
                 ">
 
-                AI route
-                visualization
+                AI route visualization with live bus positions
 
                 </p>
 
+                <div id="liveBusCount" class="live-bus-badge" style="display:none;">
+                    <span class="live-dot"></span>
+                    Waiting for route...
+                </div>
+
+                <div class="legend-box">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#3b82f6;"></div>
+                        Moving / On Time
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#22c55e;"></div>
+                        Approaching your stop
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#ef4444;"></div>
+                        Delayed
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#6366f1;"></div>
+                        Route Station
+                    </div>
+                </div>
+
                 <div
-                id="map">
+                id="map"
+                style="margin-top:14px;">
 
                 </div>
 
@@ -910,8 +1007,7 @@ select option{
 <!-- LEAFLET -->
 
 <script
-src=
-"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js">
 </script>
 
 <script>
@@ -920,24 +1016,33 @@ src=
 // MAP
 // ------------------
 
-let map = L.map(
-    "map"
-).setView(
-    [12.9716,77.5946],
-    11
-);
+let map;
 
-L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-    attribution:
-    '&copy; OpenStreetMap'
+function initMap() {
+    if (map) return; // already initialised
+    map = L.map(
+        "map"
+    ).setView(
+        [12.9716,77.5946],
+        11
+    );
+
+    L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        attribution:
+        '&copy; OpenStreetMap'
+    }
+    ).addTo(map);
 }
-).addTo(map);
 
 let routeLine = null;
 let stationMarkers = [];
 let busMarkers = [];
+let liveBusMarkers = [];
+let liveBusInterval = null;
+let currentSource = null;
+let currentDestination = null;
 
 // ------------------
 // TAB SWITCH
@@ -995,31 +1100,28 @@ map.invalidateSize(),
 
 function clearMap(){
 
-stationMarkers
-.forEach(
-marker =>
-map.removeLayer(
-marker
-)
-);
-
+stationMarkers.forEach(m => map.removeLayer(m));
 stationMarkers = [];
 
-busMarkers
-.forEach(
-marker =>
-map.removeLayer(
-marker
-)
-);
-
+busMarkers.forEach(m => map.removeLayer(m));
 busMarkers = [];
 
-if(routeLine){
+liveBusMarkers.forEach(m => map.removeLayer(m));
+liveBusMarkers = [];
 
-map.removeLayer(
-routeLine
-);
+// Clear smooth animation state
+Object.values(busAnimState).forEach(b => map.removeLayer(b.marker));
+busAnimState = {};
+if(animationFrame){ cancelAnimationFrame(animationFrame); animationFrame = null; }
+
+if(liveBusInterval){
+    clearInterval(liveBusInterval);
+    liveBusInterval = null;
+}
+
+if(routeLine){
+    map.removeLayer(routeLine);
+    routeLine = null;
 }
 }
 
@@ -1029,6 +1131,8 @@ routeLine
 
 async function
 findRoute(){
+
+initMap(); // ensure map is ready
 
 const source =
 document
@@ -1041,6 +1145,9 @@ document
 .getElementById(
 "destination"
 ).value;
+
+currentSource = source;
+currentDestination = destination;
 
 const response =
 await fetch(
@@ -1162,6 +1269,24 @@ padding:
 [80,80]
 }
 );
+
+// ------------------
+// LIVE BUS TRACKING
+// ------------------
+const badge = document.getElementById("liveBusCount");
+if(badge){
+    badge.style.display = "inline-flex";
+    badge.innerHTML = '<span class="live-dot"></span> Loading live buses...';
+}
+loadLiveBuses(source, destination);
+if(liveBusInterval) clearInterval(liveBusInterval);
+liveBusInterval = setInterval(() => {
+    loadLiveBuses(currentSource, currentDestination);
+}, 5000);
+
+// Start smooth animation loop
+if(animationFrame) cancelAnimationFrame(animationFrame);
+animateBuses();
 
 // ------------------
 // PREDICTION
@@ -1438,7 +1563,175 @@ async function loadActiveBuses(){
     ).innerHTML =
     html;
 }
+// ------------------
+// LIVE BUS TRACKING
+// ------------------
+
+const busIconHTML = (status) => {
+    const color = status === "Delayed" ? "#ef4444"
+                : status === "Approaching" ? "#22c55e"
+                : "#3b82f6";
+    return { color, html: `
+        <div style="position:relative;width:42px;height:48px;">
+            <div style="
+                background:${color};
+                border-radius:50%;
+                width:42px;height:42px;
+                display:flex;align-items:center;justify-content:center;
+                font-size:22px;
+                box-shadow:0 0 0 5px ${color}33, 0 3px 12px rgba(0,0,0,0.6);
+                border:2.5px solid white;
+            ">🚌</div>
+            <div style="
+                position:absolute;bottom:0;left:50%;
+                transform:translateX(-50%);
+                width:0;height:0;
+                border-left:7px solid transparent;
+                border-right:7px solid transparent;
+                border-top:10px solid ${color};
+            "></div>
+        </div>`
+    };
+};
+
+// Per-bus client-side animation state
+let busAnimState = {};  // bus_id → { marker, lat, lng, targetLat, targetLng, color }
+let animationFrame = null;
+
+function animateBuses() {
+    let anyMoving = false;
+    Object.values(busAnimState).forEach(b => {
+        const LERP = 0.035; // smoothing factor
+        const dlat = b.targetLat - b.lat;
+        const dlng = b.targetLng - b.lng;
+        if (Math.abs(dlat) > 0.00001 || Math.abs(dlng) > 0.00001) {
+            b.lat += dlat * LERP;
+            b.lng += dlng * LERP;
+            b.marker.setLatLng([b.lat, b.lng]);
+            anyMoving = true;
+        }
+    });
+    animationFrame = requestAnimationFrame(animateBuses);
+}
+
+async function loadLiveBuses(source, destination) {
+    if (!source || !destination) return;
+
+    try {
+        const res = await fetch("/get_live_buses", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source, destination })
+        });
+        const data = await res.json();
+        if (!data.success) return;
+
+        const buses = data.live_buses;
+        const incomingIds = new Set(buses.map(b => b.bus_id));
+
+        // Remove markers for buses no longer in response
+        Object.keys(busAnimState).forEach(id => {
+            if (!incomingIds.has(id)) {
+                map.removeLayer(busAnimState[id].marker);
+                delete busAnimState[id];
+            }
+        });
+
+        buses.forEach(bus => {
+            const { color, html } = busIconHTML(bus.status);
+            const icon = L.divIcon({ className: "", html, iconSize: [42, 48], iconAnchor: [21, 48], popupAnchor: [0, -52] });
+
+            const occupancyColor = bus.occupancy > 80 ? '#ef4444' : bus.occupancy > 50 ? '#f59e0b' : '#22c55e';
+            const occupancyBar = `
+                <div style="background:rgba(255,255,255,0.1);border-radius:6px;height:8px;margin-top:6px;overflow:hidden;">
+                    <div style="width:${bus.occupancy}%;height:100%;background:${occupancyColor};border-radius:6px;transition:width 0.4s;"></div>
+                </div>`;
+
+            const popup = `
+            <div style="
+                background:linear-gradient(135deg,#0f172a,#1e293b);
+                color:white;padding:18px 20px;border-radius:18px;
+                min-width:240px;font-family:Inter,sans-serif;
+                box-shadow:0 8px 32px rgba(0,0,0,0.6);
+            ">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                    <span style="font-size:28px;">🚌</span>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;letter-spacing:1px;">${bus.bus_id}</div>
+                        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Live Tracking</div>
+                    </div>
+                    <span style="
+                        margin-left:auto;
+                        background:${color}22;color:${color};
+                        border:1px solid ${color}55;
+                        padding:4px 10px;border-radius:20px;
+                        font-size:11px;font-weight:700;
+                    ">${bus.status}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+                    <div style="background:rgba(255,255,255,0.06);border-radius:12px;padding:12px;">
+                        <div style="color:#94a3b8;font-size:11px;margin-bottom:4px;">🕐 ETA to Your Stop</div>
+                        <div style="font-weight:800;font-size:22px;color:#60a5fa;">${bus.eta_to_source} min</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06);border-radius:12px;padding:12px;">
+                        <div style="color:#94a3b8;font-size:11px;margin-bottom:4px;">⚡ Speed</div>
+                        <div style="font-weight:800;font-size:22px;color:#a78bfa;">${bus.speed} km/h</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06);border-radius:12px;padding:12px;grid-column:span 2;">
+                        <div style="color:#94a3b8;font-size:11px;margin-bottom:4px;">📍 Currently between</div>
+                        <div style="font-weight:600;">${bus.current_stop} → ${bus.next_stop}</div>
+                    </div>
+                </div>
+                <div style="margin-top:12px;font-size:12px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span style="color:#94a3b8;">👥 Occupancy</span>
+                        <span style="font-weight:700;color:${occupancyColor};">${bus.occupancy}%</span>
+                    </div>
+                    ${occupancyBar}
+                </div>
+                <div style="margin-top:12px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+                    Heading to <strong style="color:#60a5fa;">${source}</strong> → <strong style="color:#22c55e;">${destination}</strong>
+                </div>
+            </div>`;
+
+            if (busAnimState[bus.bus_id]) {
+                // Update target position for smooth animation
+                busAnimState[bus.bus_id].targetLat = bus.lat;
+                busAnimState[bus.bus_id].targetLng = bus.lng;
+                // Update popup
+                busAnimState[bus.bus_id].marker.setPopupContent(popup);
+                // Update icon color if status changed
+                busAnimState[bus.bus_id].marker.setIcon(icon);
+            } else {
+                // New bus — create marker
+                const marker = L.marker([bus.lat, bus.lng], { icon })
+                    .addTo(map)
+                    .bindPopup(popup, { maxWidth: 290, className: "live-bus-popup" });
+
+                busAnimState[bus.bus_id] = {
+                    marker,
+                    lat: bus.lat, lng: bus.lng,
+                    targetLat: bus.lat, targetLng: bus.lng
+                };
+                liveBusMarkers.push(marker);
+            }
+        });
+
+        // Update badge
+        const badge = document.getElementById("liveBusCount");
+        if (badge) {
+            badge.style.display = "inline-flex";
+            badge.innerHTML = `<span class="live-dot"></span> ${buses.length} buses heading your way`;
+        }
+
+    } catch(e) {
+        console.error("Live bus error:", e);
+    }
+}
+
 window.onload = function(){
+
+    initMap();
 
     const savedTheme =
     localStorage.getItem(
@@ -1460,6 +1753,3 @@ window.onload = function(){
 
 </body>
 </html>
-
-
-
