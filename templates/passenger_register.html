@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account | BMTC Smart Transit AI</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Segoe UI,sans-serif;
+        }
+
+        body{
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            background:
+            linear-gradient(
+                135deg,
+                #0f172a,
+                #1e3a8a,
+                #2563eb
+            );
+            overflow:hidden;
+            position:relative;
+            padding:30px 0;
+        }
+
+        .background-blur{
+            position:absolute;
+            width:600px;
+            height:600px;
+            background:rgba(255,255,255,0.08);
+            border-radius:50%;
+            filter:blur(100px);
+            top:-150px;
+            left:-150px;
+        }
+
+        .background-blur2{
+            position:absolute;
+            width:500px;
+            height:500px;
+            background:rgba(59,130,246,0.18);
+            border-radius:50%;
+            filter:blur(120px);
+            bottom:-150px;
+            right:-150px;
+        }
+
+        .login-card{
+            width:420px;
+            padding:40px;
+            border-radius:25px;
+            background:rgba(255,255,255,0.1);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.2);
+            box-shadow:0 8px 32px rgba(0,0,0,0.3);
+            color:white;
+            z-index:2;
+        }
+
+        .role-badge{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            background:rgba(34,197,94,0.15);
+            border:1px solid rgba(34,197,94,0.4);
+            color:#86efac;
+            padding:6px 14px;
+            border-radius:20px;
+            font-size:12px;
+            font-weight:700;
+            letter-spacing:0.5px;
+            margin-bottom:18px;
+        }
+
+        .title{
+            margin-bottom:6px;
+            font-size:28px;
+            font-weight:bold;
+        }
+
+        .subtitle{
+            margin-bottom:28px;
+            opacity:0.75;
+            font-size:14px;
+        }
+
+        label{
+            font-size:13px;
+            opacity:0.8;
+            margin-bottom:6px;
+            display:block;
+        }
+
+        input{
+            width:100%;
+            padding:14px;
+            margin-bottom:16px;
+            border:none;
+            border-radius:12px;
+            outline:none;
+            background:rgba(255,255,255,0.12);
+            color:white;
+            font-size:15px;
+        }
+
+        input::placeholder{
+            color:#cbd5e1;
+        }
+
+        input[type="date"]{
+            color-scheme:dark;
+        }
+
+        button{
+            width:100%;
+            padding:15px;
+            border:none;
+            border-radius:12px;
+            background:linear-gradient(135deg,#22c55e,#16a34a);
+            color:white;
+            font-size:18px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+            margin-top:6px;
+        }
+
+        button:hover{
+            transform:translateY(-2px);
+            box-shadow:0 6px 18px rgba(34,197,94,0.4);
+        }
+
+        .error{
+            color:#fca5a5;
+            margin-top:14px;
+            text-align:center;
+            font-size:14px;
+            min-height:18px;
+        }
+
+        .success{
+            color:#86efac;
+            margin-top:14px;
+            text-align:center;
+            font-size:14px;
+            min-height:18px;
+        }
+
+        .switch-link{
+            margin-top:20px;
+            text-align:center;
+            font-size:14px;
+            opacity:0.85;
+        }
+
+        .switch-link a{
+            color:#86efac;
+            font-weight:600;
+            text-decoration:none;
+        }
+
+        .switch-link a:hover{
+            text-decoration:underline;
+        }
+
+        .hint{
+            font-size:11.5px;
+            opacity:0.6;
+            margin-top:-12px;
+            margin-bottom:14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="background-blur"></div>
+<div class="background-blur2"></div>
+
+<div class="login-card">
+
+    <div class="role-badge">🧑‍✈️ PASSENGER SIGN UP</div>
+
+    <div class="title">Create Your Account</div>
+    <div class="subtitle">Sign up to start tracking buses in real time</div>
+
+    <label for="name">Full Name</label>
+    <input type="text" id="name" placeholder="e.g. Shashank Reddy">
+
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+
+    <label for="dob">Date of Birth</label>
+    <input type="date" id="dob">
+
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="At least 6 characters">
+    <div class="hint">Use 6+ characters. You'll need this to log in.</div>
+
+    <button onclick="register()">Create Account</button>
+
+    <div class="error" id="error"></div>
+    <div class="success" id="success"></div>
+
+    <div class="switch-link">
+        Already have an account? <a href="/passenger/login">Log in</a>
+    </div>
+
+</div>
+
+<script>
+async function register(){
+
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const dob = document.getElementById("dob").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const errorEl = document.getElementById("error");
+    const successEl = document.getElementById("success");
+    errorEl.innerText = "";
+    successEl.innerText = "";
+
+    if(!name || !phone || !dob || !password){
+        errorEl.innerText = "Please fill in all fields.";
+        return;
+    }
+
+    if(!/^[6-9]\d{9}$/.test(phone)){
+        errorEl.innerText = "Enter a valid 10-digit Indian mobile number.";
+        return;
+    }
+
+    if(password.length < 6){
+        errorEl.innerText = "Password must be at least 6 characters.";
+        return;
+    }
+
+    try{
+        const response = await fetch("/passenger/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, phone, dob, password })
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            successEl.innerText = data.message;
+            setTimeout(() => {
+                window.location.href = "/passenger/login";
+            }, 1200);
+        } else {
+            errorEl.innerText = data.message || "Could not create account.";
+        }
+    } catch(e){
+        errorEl.innerText = "Something went wrong. Please try again.";
+    }
+}
+</script>
+
+</body>
+</html>

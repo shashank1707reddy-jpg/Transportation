@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passenger Login | BMTC Smart Transit AI</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Segoe UI,sans-serif;
+        }
+
+        body{
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            background:
+            linear-gradient(
+                135deg,
+                #0f172a,
+                #1e3a8a,
+                #2563eb
+            );
+            overflow:hidden;
+            position:relative;
+        }
+
+        .background-blur{
+            position:absolute;
+            width:600px;
+            height:600px;
+            background:rgba(255,255,255,0.08);
+            border-radius:50%;
+            filter:blur(100px);
+            top:-150px;
+            left:-150px;
+        }
+
+        .background-blur2{
+            position:absolute;
+            width:500px;
+            height:500px;
+            background:rgba(59,130,246,0.18);
+            border-radius:50%;
+            filter:blur(120px);
+            bottom:-150px;
+            right:-150px;
+        }
+
+        .login-card{
+            width:400px;
+            padding:40px;
+            border-radius:25px;
+            background:rgba(255,255,255,0.1);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.2);
+            box-shadow:0 8px 32px rgba(0,0,0,0.3);
+            color:white;
+            z-index:2;
+        }
+
+        .role-badge{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            background:rgba(59,130,246,0.2);
+            border:1px solid rgba(59,130,246,0.4);
+            color:#93c5fd;
+            padding:6px 14px;
+            border-radius:20px;
+            font-size:12px;
+            font-weight:700;
+            letter-spacing:0.5px;
+            margin-bottom:18px;
+        }
+
+        .title{
+            margin-bottom:6px;
+            font-size:28px;
+            font-weight:bold;
+        }
+
+        .subtitle{
+            margin-bottom:30px;
+            opacity:0.75;
+            font-size:14px;
+        }
+
+        label{
+            font-size:13px;
+            opacity:0.8;
+            margin-bottom:6px;
+            display:block;
+        }
+
+        input{
+            width:100%;
+            padding:15px;
+            margin-bottom:18px;
+            border:none;
+            border-radius:12px;
+            outline:none;
+            background:rgba(255,255,255,0.12);
+            color:white;
+            font-size:16px;
+        }
+
+        input::placeholder{
+            color:#cbd5e1;
+        }
+
+        button{
+            width:100%;
+            padding:15px;
+            border:none;
+            border-radius:12px;
+            background:linear-gradient(135deg,#3b82f6,#2563eb);
+            color:white;
+            font-size:18px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        button:hover{
+            transform:translateY(-2px);
+            box-shadow:0 6px 18px rgba(37,99,235,0.4);
+        }
+
+        .error{
+            color:#fca5a5;
+            margin-top:14px;
+            text-align:center;
+            font-size:14px;
+            min-height:18px;
+        }
+
+        .switch-link{
+            margin-top:22px;
+            text-align:center;
+            font-size:14px;
+            opacity:0.85;
+        }
+
+        .switch-link a{
+            color:#93c5fd;
+            font-weight:600;
+            text-decoration:none;
+        }
+
+        .switch-link a:hover{
+            text-decoration:underline;
+        }
+
+        .admin-link{
+            margin-top:14px;
+            text-align:center;
+            font-size:12.5px;
+        }
+
+        .admin-link a{
+            color:#94a3b8;
+            text-decoration:none;
+        }
+
+        .admin-link a:hover{
+            color:#cbd5e1;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="background-blur"></div>
+<div class="background-blur2"></div>
+
+<div class="login-card">
+
+    <div class="role-badge">🧑‍✈️ PASSENGER LOGIN</div>
+
+    <div class="title">Welcome Back</div>
+    <div class="subtitle">Log in to track buses and plan your route</div>
+
+    <label for="phone">Phone Number</label>
+    <input
+        type="tel"
+        id="phone"
+        placeholder="10-digit mobile number"
+        maxlength="10"
+        inputmode="numeric"
+    >
+
+    <label for="password">Password</label>
+    <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+    >
+
+    <button onclick="login()">Log In</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="switch-link">
+        New here? <a href="/passenger/register">Create an account</a>
+    </div>
+
+    <div class="admin-link">
+        <a href="/admin/login">Admin Login →</a>
+    </div>
+
+</div>
+
+<script>
+async function login(){
+
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorEl = document.getElementById("error");
+    errorEl.innerText = "";
+
+    if(!phone || !password){
+        errorEl.innerText = "Please enter both phone number and password.";
+        return;
+    }
+
+    try{
+        const response = await fetch("/passenger/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone, password })
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            window.location.href = "/passenger";
+        } else {
+            errorEl.innerText = data.message || "Invalid login.";
+        }
+    } catch(e){
+        errorEl.innerText = "Something went wrong. Please try again.";
+    }
+}
+
+document.getElementById("password").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") login();
+});
+</script>
+
+</body>
+</html>

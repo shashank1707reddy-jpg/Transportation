@@ -1,0 +1,9 @@
+{
+  "9876543219": {
+    "name": "Shashank",
+    "phone": "9876543219",
+    "dob": "2007-07-17",
+    "password": "scrypt:32768:8:1$dhsDKWoX3tBNRudt$b242de77dec2824420d5cb28b7e0aa65dc46bad99a20faf55eb72845224ae1f2ea33647d9339f93dfdb24d6318c3097d586badf57d72c1338b8a2173b1df4448",
+    "created_at": "2026-06-18T10:06:37.477602"
+  }
+}

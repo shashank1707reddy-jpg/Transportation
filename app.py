@@ -1,26 +1,69 @@
-from unittest import result
-
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from utils.route_engine import RouteEngine
 from utils.station_network import STATIONS
 from utils.ai_predictor import AIPredictor
-import random
+from werkzeug.security import generate_password_hash, check_password_hash
+import random, json, os, re
+from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "bmtc_transit_secret_2024_xK9#mP"
 
 # -----------------------------
-# Demo Login Credentials
+# Admin Credentials (fixed)
 # -----------------------------
-USERS = {
-    "admin": {
-        "password": "admin123",
-        "role": "admin"
-    },
-    "passenger": {
-        "password": "pass123",
-        "role": "passenger"
-    }
+ADMIN_CREDENTIALS = {
+    "username": "bmtc_admin",
+    "password": generate_password_hash("Admin@BMTC#2024"),
+    "role": "admin"
 }
+
+# -----------------------------
+# Passenger DB (JSON file)
+# -----------------------------
+PASSENGER_DB = os.path.join(os.path.dirname(__file__), "passengers.json")
+
+def load_passengers():
+    if not os.path.exists(PASSENGER_DB):
+        return {}
+    with open(PASSENGER_DB, "r") as f:
+        return json.load(f)
+
+def save_passengers(db):
+    with open(PASSENGER_DB, "w") as f:
+        json.dump(db, f, indent=2)
+
+def is_valid_phone(phone):
+    return bool(re.match(r"^[6-9]\d{9}$", phone))
+
+def is_valid_dob(dob):
+    try:
+        dt = datetime.strptime(dob, "%Y-%m-%d")
+        age = (datetime.today() - dt).days // 365
+        return age >= 5
+    except:
+        return False
+
+# -----------------------------
+# Session helpers
+# -----------------------------
+def passenger_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get("role") != "passenger":
+            return redirect(url_for("passenger_login_page"))
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get("role") != "admin":
+            return redirect(url_for("admin_login_page"))
+        return f(*args, **kwargs)
+    return decorated
 
 # -----------------------------
 # Global Simulation State
@@ -90,55 +133,115 @@ ai = AIPredictor()
 # Pages
 # -----------------------------
 @app.route("/")
-def login_page():
-    return render_template("login.html")
+def index():
+    return redirect(url_for("passenger_login_page"))
 
+# ---- Passenger Auth ----
+@app.route("/passenger/login")
+def passenger_login_page():
+    if session.get("role") == "passenger":
+        return redirect(url_for("passenger_page"))
+    return render_template("passenger_login.html")
 
+@app.route("/passenger/register")
+def passenger_register_page():
+    return render_template("passenger_register.html")
+
+@app.route("/passenger/register", methods=["POST"])
+def passenger_register():
+    data = request.json
+    name     = data.get("name", "").strip()
+    phone    = data.get("phone", "").strip()
+    dob      = data.get("dob", "").strip()
+    password = data.get("password", "").strip()
+
+    if not all([name, phone, dob, password]):
+        return jsonify({"success": False, "message": "All fields are required."})
+    if not is_valid_phone(phone):
+        return jsonify({"success": False, "message": "Enter a valid 10-digit Indian mobile number."})
+    if not is_valid_dob(dob):
+        return jsonify({"success": False, "message": "Enter a valid date of birth."})
+    if len(password) < 6:
+        return jsonify({"success": False, "message": "Password must be at least 6 characters."})
+
+    db = load_passengers()
+    if phone in db:
+        return jsonify({"success": False, "message": "An account with this phone number already exists."})
+
+    db[phone] = {
+        "name": name,
+        "phone": phone,
+        "dob": dob,
+        "password": generate_password_hash(password),
+        "created_at": datetime.now().isoformat()
+    }
+    save_passengers(db)
+    return jsonify({"success": True, "message": "Account created! Please log in."})
+
+@app.route("/passenger/login", methods=["POST"])
+def passenger_login():
+    data     = request.json
+    phone    = data.get("phone", "").strip()
+    password = data.get("password", "").strip()
+
+    if not phone or not password:
+        return jsonify({"success": False, "message": "Phone and password are required."})
+
+    db = load_passengers()
+    user = db.get(phone)
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({"success": False, "message": "Invalid phone number or password."})
+
+    session["role"]  = "passenger"
+    session["phone"] = phone
+    session["name"]  = user["name"]
+    return jsonify({"success": True})
+
+@app.route("/passenger/logout")
+def passenger_logout():
+    session.clear()
+    return redirect(url_for("passenger_login_page"))
+
+# ---- Admin Auth ----
+@app.route("/admin/login")
+def admin_login_page():
+    if session.get("role") == "admin":
+        return redirect(url_for("admin_page"))
+    return render_template("admin_login.html")
+
+@app.route("/admin/login", methods=["POST"])
+def admin_login():
+    data     = request.json
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if (username == ADMIN_CREDENTIALS["username"] and
+            check_password_hash(ADMIN_CREDENTIALS["password"], password)):
+        session["role"]     = "admin"
+        session["username"] = username
+        return jsonify({"success": True})
+
+    return jsonify({"success": False, "message": "Invalid admin credentials."})
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.clear()
+    return redirect(url_for("admin_login_page"))
+
+# ---- Protected Pages ----
 @app.route("/passenger")
+@passenger_required
 def passenger_page():
     return render_template(
         "passenger.html",
-        stations=sorted(STATIONS.keys())
+        stations=sorted(STATIONS.keys()),
+        name=session.get("name", "Passenger")
     )
 
-
 @app.route("/admin")
+@admin_required
 def admin_page():
     return render_template("admin.html")
-
-
-# -----------------------------
-# Login API
-# -----------------------------
-@app.route("/login", methods=["POST"])
-def login():
-
-    data = request.json
-
-    username = data.get(
-        "username", ""
-    ).strip()
-
-    password = data.get(
-        "password", ""
-    ).strip()
-
-    user = USERS.get(username)
-
-    if (
-        user and
-        user["password"] == password
-    ):
-        return jsonify({
-            "success": True,
-            "role": user["role"]
-        })
-
-    return jsonify({
-        "success": False,
-        "message":
-        "Invalid credentials"
-    })
 
 
 # -----------------------------
@@ -148,6 +251,7 @@ def login():
     "/get_route",
     methods=["POST"]
 )
+@passenger_required
 def get_route():
 
     data = request.json
@@ -335,6 +439,7 @@ def get_route():
     "/update_simulation",
     methods=["POST"]
 )
+@admin_required
 def update_simulation():
 
     data = request.json
@@ -396,6 +501,7 @@ def get_stations():
     })
 
 @app.route("/get_active_buses")
+@passenger_required
 def get_active_buses():
     return jsonify({
         "active_buses": simulation_state["active_buses"]
@@ -410,6 +516,7 @@ def get_active_buses():
 _live_bus_state = {}
 
 @app.route("/get_live_buses", methods=["POST"])
+@passenger_required
 def get_live_buses():
     """
     Returns buses on the route heading from source to destination.

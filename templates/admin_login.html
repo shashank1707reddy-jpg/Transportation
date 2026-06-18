@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | BMTC Smart Transit AI</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Segoe UI,sans-serif;
+        }
+
+        body{
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            background:
+            linear-gradient(
+                135deg,
+                #0f172a,
+                #1e293b,
+                #334155
+            );
+            overflow:hidden;
+            position:relative;
+        }
+
+        .background-blur{
+            position:absolute;
+            width:600px;
+            height:600px;
+            background:rgba(244,63,94,0.06);
+            border-radius:50%;
+            filter:blur(100px);
+            top:-150px;
+            left:-150px;
+        }
+
+        .background-blur2{
+            position:absolute;
+            width:500px;
+            height:500px;
+            background:rgba(168,85,247,0.1);
+            border-radius:50%;
+            filter:blur(120px);
+            bottom:-150px;
+            right:-150px;
+        }
+
+        .login-card{
+            width:400px;
+            padding:40px;
+            border-radius:25px;
+            background:rgba(255,255,255,0.06);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.15);
+            box-shadow:0 8px 32px rgba(0,0,0,0.5);
+            color:white;
+            z-index:2;
+        }
+
+        .role-badge{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            background:rgba(244,63,94,0.15);
+            border:1px solid rgba(244,63,94,0.35);
+            color:#fca5a5;
+            padding:6px 14px;
+            border-radius:20px;
+            font-size:12px;
+            font-weight:700;
+            letter-spacing:0.5px;
+            margin-bottom:18px;
+        }
+
+        .title{
+            margin-bottom:6px;
+            font-size:28px;
+            font-weight:bold;
+        }
+
+        .subtitle{
+            margin-bottom:30px;
+            opacity:0.7;
+            font-size:14px;
+        }
+
+        label{
+            font-size:13px;
+            opacity:0.8;
+            margin-bottom:6px;
+            display:block;
+        }
+
+        input{
+            width:100%;
+            padding:15px;
+            margin-bottom:18px;
+            border:none;
+            border-radius:12px;
+            outline:none;
+            background:rgba(255,255,255,0.08);
+            color:white;
+            font-size:16px;
+            border:1px solid rgba(255,255,255,0.08);
+        }
+
+        input::placeholder{
+            color:#94a3b8;
+        }
+
+        button{
+            width:100%;
+            padding:15px;
+            border:none;
+            border-radius:12px;
+            background:linear-gradient(135deg,#475569,#1e293b);
+            border:1px solid rgba(255,255,255,0.1);
+            color:white;
+            font-size:18px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        button:hover{
+            transform:translateY(-2px);
+            box-shadow:0 6px 18px rgba(0,0,0,0.4);
+        }
+
+        .error{
+            color:#fca5a5;
+            margin-top:14px;
+            text-align:center;
+            font-size:14px;
+            min-height:18px;
+        }
+
+        .switch-link{
+            margin-top:24px;
+            text-align:center;
+            font-size:13px;
+        }
+
+        .switch-link a{
+            color:#94a3b8;
+            text-decoration:none;
+        }
+
+        .switch-link a:hover{
+            color:#cbd5e1;
+        }
+
+        .lock-note{
+            margin-top:18px;
+            font-size:11.5px;
+            color:#64748b;
+            text-align:center;
+            line-height:1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="background-blur"></div>
+<div class="background-blur2"></div>
+
+<div class="login-card">
+
+    <div class="role-badge">🔒 ADMIN ACCESS</div>
+
+    <div class="title">Admin Console</div>
+    <div class="subtitle">Restricted — authorized BMTC staff only</div>
+
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="Admin username" autocomplete="off">
+
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="Admin password">
+
+    <button onclick="login()">Log In</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="lock-note">
+        This account is provisioned by the system administrator and cannot be self-registered.
+    </div>
+
+    <div class="switch-link">
+        <a href="/passenger/login">← Back to Passenger Login</a>
+    </div>
+
+</div>
+
+<script>
+async function login(){
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorEl = document.getElementById("error");
+    errorEl.innerText = "";
+
+    if(!username || !password){
+        errorEl.innerText = "Please enter both username and password.";
+        return;
+    }
+
+    try{
+        const response = await fetch("/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if(data.success){
+            window.location.href = "/admin";
+        } else {
+            errorEl.innerText = data.message || "Invalid admin credentials.";
+        }
+    } catch(e){
+        errorEl.innerText = "Something went wrong. Please try again.";
+    }
+}
+
+document.getElementById("password").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") login();
+});
+</script>
+
+</body>
+</html>
