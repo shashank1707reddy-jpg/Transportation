@@ -3,7 +3,7 @@ from utils.route_engine import RouteEngine
 from utils.station_network import STATIONS
 from utils.ai_predictor import AIPredictor
 from werkzeug.security import generate_password_hash, check_password_hash
-import random, json, os, re
+import random, json, os, re, math
 from datetime import datetime
 
 app = Flask(__name__)
@@ -414,8 +414,9 @@ def get_route():
             ai_confidence
         })
     route_coordinates = []
+    total_stops = len(result["route"])
 
-    for stop in result["route"]:
+    for idx, stop in enumerate(result["route"]):
 
         if stop in STATIONS:
 
@@ -427,7 +428,13 @@ def get_route():
 
                 "lat": lat,
 
-                "lng": lng
+                "lng": lng,
+
+                "is_source": idx == 0,
+
+                "is_destination": idx == total_stops - 1,
+
+                "stop_index": idx
             })
 
     result["route_coordinates"] = (
@@ -708,6 +715,15 @@ def get_live_buses():
 
         lat = lat_a + (lat_b - lat_a) * progress
         lng = lng_a + (lng_b - lng_a) * progress
+
+        # Small perpendicular offset (deterministic per bus) so buses on the
+        # same/adjacent segment never render exactly on top of each other,
+        # which made them hard to tell apart and tap on the map.
+        bus_hash = sum(ord(c) for c in bus["bus_id"])
+        offset_strength = 0.0009  # ~80-100m at Bengaluru's latitude
+        offset_angle = (bus_hash % 360) * (math.pi / 180)
+        lat += math.cos(offset_angle) * offset_strength
+        lng += math.sin(offset_angle) * offset_strength
 
         # ETA to source: segments remaining before source_idx
         segs_to_source = max(0, source_idx - seg_idx) + (1 - progress)

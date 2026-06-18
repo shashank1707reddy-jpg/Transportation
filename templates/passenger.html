@@ -853,20 +853,28 @@ select option{
 
                 <div class="legend-box">
                     <div class="legend-item">
-                        <div class="legend-dot" style="background:#3b82f6;"></div>
-                        Moving / On Time
-                    </div>
-                    <div class="legend-item">
                         <div class="legend-dot" style="background:#22c55e;"></div>
-                        Approaching your stop
+                        Your Boarding Point
                     </div>
                     <div class="legend-item">
                         <div class="legend-dot" style="background:#ef4444;"></div>
-                        Delayed
+                        Destination
                     </div>
                     <div class="legend-item">
                         <div class="legend-dot" style="background:#6366f1;"></div>
                         Route Station
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#3b82f6;"></div>
+                        Bus: Moving / On Time
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#22c55e;"></div>
+                        Bus: Approaching your stop
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:#ef4444;"></div>
+                        Bus: Delayed
                     </div>
                 </div>
 
@@ -1237,6 +1245,87 @@ routeColor =
 
 const coords = [];
 
+// Icon builders for distinct stop types
+const boardingIcon = L.divIcon({
+    className: "",
+    html: `
+    <div style="position:relative;width:46px;height:54px;">
+        <div style="
+            position:absolute;
+            top:0;left:0;
+            width:46px;height:46px;
+            border-radius:50%;
+            background:rgba(34,197,94,0.35);
+            animation:livePulse 1.4s ease-in-out infinite;
+        "></div>
+        <div style="
+            position:absolute;
+            top:5px;left:5px;
+            width:36px;height:36px;
+            border-radius:50%;
+            background:linear-gradient(135deg,#22c55e,#16a34a);
+            display:flex;align-items:center;justify-content:center;
+            font-size:18px;
+            border:3px solid white;
+            box-shadow:0 3px 12px rgba(0,0,0,0.5);
+        ">🟢</div>
+        <div style="
+            position:absolute;bottom:0;left:50%;
+            transform:translateX(-50%);
+            width:0;height:0;
+            border-left:7px solid transparent;
+            border-right:7px solid transparent;
+            border-top:10px solid #16a34a;
+        "></div>
+    </div>`,
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -56]
+});
+
+const destinationIcon = L.divIcon({
+    className: "",
+    html: `
+    <div style="position:relative;width:46px;height:54px;">
+        <div style="
+            width:40px;height:40px;
+            border-radius:50%;
+            background:linear-gradient(135deg,#ef4444,#b91c1c);
+            display:flex;align-items:center;justify-content:center;
+            font-size:20px;
+            border:3px solid white;
+            box-shadow:0 3px 14px rgba(0,0,0,0.6);
+            margin:0 auto;
+        ">🏁</div>
+        <div style="
+            position:absolute;bottom:0;left:50%;
+            transform:translateX(-50%);
+            width:0;height:0;
+            border-left:8px solid transparent;
+            border-right:8px solid transparent;
+            border-top:11px solid #b91c1c;
+        "></div>
+    </div>`,
+    iconSize: [46, 54],
+    iconAnchor: [23, 54],
+    popupAnchor: [0, -56]
+});
+
+const intermediateIcon = L.divIcon({
+    className: "",
+    html: `
+    <div style="
+        width:16px;height:16px;
+        border-radius:50%;
+        background:#6366f1;
+        border:2.5px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.5);
+    "></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10]
+});
+
 data.route_coordinates
 .forEach(
 station => {
@@ -1246,14 +1335,25 @@ station.lat,
 station.lng
 ]);
 
+let icon = intermediateIcon;
+let popupLabel = station.station;
+
+if(station.is_source){
+    icon = boardingIcon;
+    popupLabel = `<strong>🟢 Boarding Point</strong><br>${station.station}`;
+} else if(station.is_destination){
+    icon = destinationIcon;
+    popupLabel = `<strong>🏁 Destination</strong><br>${station.station}`;
+}
+
 const marker =
 L.marker([
 station.lat,
 station.lng
-])
+], { icon })
 .addTo(map)
 .bindPopup(
-station.station
+popupLabel
 );
 
 stationMarkers.push(
@@ -1269,15 +1369,28 @@ coords,
 color:
 routeColor,
 
-weight:8,
+weight:6,
 
 opacity:
-0.95,
+0.9,
 
 smoothFactor:
-4
+4,
+
+dashArray:
+null
 }
 ).addTo(map);
+
+// Glow effect underneath the route line for visibility against busy basemaps
+const routeGlow = L.polyline(coords, {
+    color: routeColor,
+    weight: 14,
+    opacity: 0.18,
+    smoothFactor: 4
+}).addTo(map);
+routeGlow.bringToBack();
+stationMarkers.push(routeGlow); // cleared alongside route on next search
 
 map.fitBounds(
 routeLine.getBounds(),
@@ -1724,6 +1837,7 @@ async function loadLiveBuses(source, destination) {
                 const marker = L.marker([bus.lat, bus.lng], { icon })
                     .addTo(map)
                     .bindPopup(popup, { maxWidth: 290, className: "live-bus-popup" });
+                marker.bringToFront();
 
                 busAnimState[bus.bus_id] = {
                     marker,
