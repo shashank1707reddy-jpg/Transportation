@@ -762,7 +762,9 @@ Transit Intelligence
 Active Buses
 </div>
 
-<div class="stat-value">
+<div
+class="stat-value"
+id="activeBusesText">
 42
 </div>
 
@@ -774,7 +776,9 @@ Active Buses
 Passengers Today
 </div>
 
-<div class="stat-value">
+<div
+class="stat-value"
+id="passengersTodayText">
 13,482
 </div>
 
@@ -992,6 +996,7 @@ document
 "emergencyMode"
 ).checked;
 
+const response =
 await fetch(
 "/update_simulation",
 {
@@ -1022,6 +1027,23 @@ emergencyMode
 })
 }
 );
+
+const result =
+await response.json();
+
+document
+.getElementById(
+"activeBusesText"
+)
+.innerText =
+result.active_bus_count;
+
+document
+.getElementById(
+"passengersTodayText"
+)
+.innerText =
+result.passengers_today.toLocaleString("en-IN");
 
 document
 .getElementById(
@@ -1087,6 +1109,30 @@ alert(
 );
 
 }
+
+async function loadCurrentState(){
+
+    try{
+        const res = await fetch("/simulation_state");
+        const state = await res.json();
+
+        if(state.active_bus_count !== undefined){
+            document.getElementById("activeBusesText").innerText = state.active_bus_count;
+        }
+
+        if(state.passengers_today !== undefined){
+            document.getElementById("passengersTodayText").innerText =
+                state.passengers_today.toLocaleString("en-IN");
+        }
+
+    } catch(e){
+        console.error("Could not load simulation state:", e);
+    }
+}
+
+window.onload = function(){
+    loadCurrentState();
+};
 
 </script>
 

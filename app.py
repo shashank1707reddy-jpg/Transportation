@@ -119,7 +119,11 @@ simulation_state = {
 
     "peak_hour": False,
 
-    "emergency_mode": False
+    "emergency_mode": False,
+
+    "active_bus_count": 42,
+
+    "passengers_today": 13482
 }
 
 # -----------------------------
@@ -444,33 +448,122 @@ def update_simulation():
 
     data = request.json
 
-    simulation_state[
-        "traffic_level"
-    ] = int(
+    traffic_level = int(
         data.get(
             "traffic_level",
             3
         )
     )
 
-    simulation_state[
-        "weather"
-    ] = data.get(
+    weather = data.get(
         "weather",
         "Clear"
     )
 
-    simulation_state[
-        "special_event"
-    ] = data.get(
+    special_event = data.get(
         "special_event",
         False
     )
 
+    peak_hour = data.get(
+        "peak_hour",
+        False
+    )
+
+    emergency_mode = data.get(
+        "emergency_mode",
+        False
+    )
+
+    simulation_state["traffic_level"]  = traffic_level
+    simulation_state["weather"]        = weather
+    simulation_state["special_event"]  = special_event
+    simulation_state["peak_hour"]      = peak_hour
+    simulation_state["emergency_mode"] = emergency_mode
+
+    # -----------------------------
+    # Ask the TRAINED MODEL (from your dataset) what ETA
+    # looks like system-wide under these exact conditions.
+    # We use a fixed "average city trip" profile (the dataset's
+    # median distance/density/speed/delay) so only the admin's
+    # live controls (traffic, weather, peak, event) vary the result.
+    # The model was trained only on Clear/Rain/Fog, so Storm is
+    # mapped to Rain (its closest trained equivalent) for the model
+    # call, then a small extra penalty is layered on top.
+    # -----------------------------
+    model_weather = weather if weather in ("Clear", "Rain", "Fog") else "Rain"
+
+    predicted_eta = ai.predict_eta(
+        distance_km=15.0,          # dataset's typical mid-range trip
+        traffic_level=traffic_level,
+        weather=model_weather,
+        peak_hour=1 if peak_hour else 0,
+        special_event=1 if special_event else 0,
+        passenger_density=60,      # dataset's typical density
+        historical_delay=5,        # dataset's typical historical delay
+        avg_speed=40               # dataset's typical avg speed
+    )
+
+    if weather == "Storm":
+        predicted_eta += 6  # extra penalty for the untrained condition
+
+    simulation_state["model_predicted_eta"] = predicted_eta
+
+    # -----------------------------
+    # Derive Active Bus Count FROM the model's ETA
+    # -----------------------------
+    # Dataset's predicted_eta ranges ~12 (best case) to ~138 (worst case),
+    # mean ~75. We map that range onto a realistic city fleet size:
+    # best case (low ETA, smooth conditions) -> more buses can keep
+    # routes moving efficiently; worst case (high ETA, gridlock) ->
+    # fewer buses can complete circuits, so effective active count drops.
+    ETA_MIN, ETA_MAX = 12.0, 138.0
+    eta_clamped = max(ETA_MIN, min(ETA_MAX, predicted_eta))
+    severity = (eta_clamped - ETA_MIN) / (ETA_MAX - ETA_MIN)  # 0 (best) -> 1 (worst)
+
+    FLEET_MAX, FLEET_MIN = 55, 12
+    active_bus_count = round(FLEET_MAX - severity * (FLEET_MAX - FLEET_MIN))
+
+    # Special event / peak hour pull a few extra reserve buses onto
+    # the road on top of the ETA-driven baseline, emergency mode pulls
+    # buses off for safety.
+    if peak_hour:
+        active_bus_count += 4
+    if special_event:
+        active_bus_count += 3
+    if emergency_mode:
+        active_bus_count = round(active_bus_count * 0.6)
+
+    active_bus_count = max(8, min(60, active_bus_count))
+    simulation_state["active_bus_count"] = active_bus_count
+
+    # -----------------------------
+    # Derive Passengers Today FROM the model's ETA + bus count
+    # -----------------------------
+    # Worse predicted ETA (severity closer to 1) means slower trips,
+    # so fewer completed trips per bus per day -> fewer riders served,
+    # even though more people may be *waiting*. Better ETA means buses
+    # complete more circuits and serve more riders.
+    trips_per_bus_per_day = round(14 - severity * 8)  # 14 (fast day) -> 6 (gridlock day)
+    riders_per_trip = 45
+
+    passengers_today = active_bus_count * trips_per_bus_per_day * riders_per_trip
+
+    if peak_hour:
+        passengers_today = round(passengers_today * 1.25)
+    if special_event:
+        passengers_today = round(passengers_today * 1.15)
+    if emergency_mode:
+        passengers_today = round(passengers_today * 0.5)
+
+    simulation_state["passengers_today"] = passengers_today
+
     return jsonify({
         "success": True,
-        "state":
-        simulation_state
+        "state": simulation_state,
+        "active_bus_count": active_bus_count,
+        "passengers_today": passengers_today,
+        "model_predicted_eta": predicted_eta
     })
 
 
